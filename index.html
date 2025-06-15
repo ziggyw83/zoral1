@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zoral Chat</title>
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
+  #chat { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: scroll; }
+  .message { margin: 10px 0; }
+  .user { color: blue; }
+  .zoral { color: green; }
+  input[type="text"] { width: 80%; padding: 8px; }
+  button { padding: 8px 12px; }
+</style>
+</head>
+<body>
+<h1>Zoral Chat Interface</h1>
+<div id="chat"></div>
+<input id="userInput" type="text" placeholder="Type your message..." />
+<button onclick="sendMessage()">Send</button>
+
+<script>
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const chat = document.getElementById('chat');
+    const message = input.value.trim();
+    if (!message) return;
+
+    // Show user message
+    const userMsgElem = document.createElement('div');
+    userMsgElem.className = 'message user';
+    userMsgElem.textContent = 'You: ' + message;
+    chat.appendChild(userMsgElem);
+
+    input.value = '';
+    chat.scrollTop = chat.scrollHeight;
+
+    // Send to backend
+    const response = await fetch('/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await response.json();
+
+    // Show Zoral's response
+    const zoralMsgElem = document.createElement('div');
+    zoralMsgElem.className = 'message zoral';
+    zoralMsgElem.textContent = 'Zoral: ' + data.response;
+    chat.appendChild(zoralMsgElem);
+
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  // Allow pressing Enter key to send message
+  document.getElementById('userInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
+</body>
+</html>

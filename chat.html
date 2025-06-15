@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Zoral Chat</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet" />
+<style>
+  body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: auto; display: flex; }
+  .chat-container { flex: 1; margin-right: 20px; }
+  .code-container { flex: 1; display: none; }
+  #chat { border: 1px solid #ccc; padding: 10px; height: 400px; overflow-y: scroll; }
+  .message { margin: 10px 0; }
+  .user { color: blue; }
+  .zoral { color: green; }
+  input[type="text"] { width: 80%; padding: 8px; margin: 5px 0; }
+  button { padding: 8px 12px; }
+  .logout { float: right; }
+  .code-panel { position: relative; }
+  #code-block { background: #f5f5f5; padding: 10px; border: 1px solid #ddd; border-radius: 4px; max-height: 400px; overflow-y: auto; }
+  .copy-button { position: absolute; top: 10px; right: 10px; padding: 5px 10px; background: #4CAF50; color: white; border: none; cursor: pointer; }
+  .copy-button:hover { background: #45a049; }
+</style>
+</head>
+<body>
+<div class="chat-container">
+  <h1>Zoral Chat Interface</h1>
+  <p>Welcome, {{ username }}! <a href="{{ url_for('logout') }}" class="logout">Logout</a></p>
+  <div id="chat">
+    {% for interaction in interactions %}
+      <div class="message {{ 'user' if interaction.startswith(username + ':') else 'zoral' }}">{{ interaction }}</div>
+    {% endfor %}
+  </div>
+  <input id="userInput" type="text" placeholder="Type your message..." />
+  <button onclick="sendMessage()">Send</button>
+</div>
+<div class="code-container">
+  <h2>Zoral's Code</h2>
+  <div class="code-panel">
+    <pre><code id="code-block" class="language-text"></code></pre>
+    <button class="copy-button" onclick="copyCode()">Copy</button>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-python.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<script>
+  async function sendMessage() {
+    const input = document.getElementById('userInput');
+    const chat = document.getElementById('chat');
+    const codeBlock = document.getElementById('code-block');
+    const codeContainer = document.querySelector('.code-container');
+    const message = input.value.trim();
+    if (!message) return;
+
+    const userMsgElem = document.createElement('div');
+    userMsgElem.className = 'message user';
+    userMsgElem.textContent = '{{ username }}: ' + message;
+    chat.appendChild(userMsgElem);
+
+    input.value = '';
+    chat.scrollTop = chat.scrollHeight;
+
+    try {
+        const response = await fetch('/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message })
+        });
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data.error) {
+            alert(`Chat error: ${data.error}`);
+            return;
+        }
+
+        const zoralMsgElem = document.createElement('div');
+        zoralMsgElem.className = 'message zoral';
+        zoralMsgElem.textContent = 'Zoral: ' + data.response;
+        chat.appendChild(zoralMsgElem);
+
+        if (data.code) {
+            codeBlock.className = 'language-' + data.lang;
+            codeBlock.textContent = data.code;
+            Prism.highlightElement(codeBlock);
+            codeContainer.style.display = 'block';
+        } else {
+            codeContainer.style.display = 'none';
+        }
+
+        chat.scrollTop = chat.scrollHeight;
+    } catch (error) {
+        console.error('Chat error:', error);
+        alert('Error communicating with server: ' + error.message);
+    }
+  }
+
+  function copyCode() {
+    const code = document.getElementById('code-block').textContent;
+    navigator.clipboard.writeText(code);
+    alert('Code copied!');
+  }
+
+  document.getElementById('userInput').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
+</body>
+</html>
